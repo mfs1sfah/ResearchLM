@@ -1,3 +1,5 @@
+JavaScript
+
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Upload, Key, CheckCircle2, FileText, 
@@ -262,7 +264,7 @@ export default function ResearchLM() {
       else if (actionType === 'similarity') {
         const payload = {
           contents: buildPromptContents(t.prompts.similarity),
-          tools: [{ googleSearch: {} }] // Fixed tool name here
+          tools: [{ googleSearch: {} }]
         };
         const result = await fetchGeminiWithRetry(url, payload);
         const text = result.candidates[0].content.parts[0].text;
