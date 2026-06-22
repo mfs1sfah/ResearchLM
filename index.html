@@ -1,780 +1,121 @@
-JavaScript
-
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Upload, Key, CheckCircle2, FileText, 
-  Search, PieChart, MessageSquare, Send, Loader2, 
-  ChevronRight, BrainCircuit, File, AlertCircle,
-  FileType, Globe, XCircle, RefreshCcw
-} from 'lucide-react';
-
-// --- Translations Dictionary ---
-const translations = {
-  ar: {
-    appTitle: "ResearchLM",
-    appSub: "مساعدك البحثي الذكي",
-    apiStatus: "حالة الاتصال (API)",
-    connected: "متصل وجاهز",
-    usingBuiltIn: "يتم استخدام المفتاح المدمج",
-    sources: "المصادر (PDF / TXT)",
-    uploadTitle: "ارفع ورقة بحثية",
-    uploadSub: "يدعم صيغ: PDF و TXT",
-    orTesting: "— أو للتجربة —",
-    loadSample: "تحميل ملف تجريبي",
-    loadedReady: "تم التحميل وجاهز للتحليل",
-    smartSummary: "الملخص الذكي",
-    similarity: "نسبة التشابه",
-    topicAnalysis: "التحليل الموضوعي",
-    workspaceEmpty: "مساحة العمل فارغة",
-    dragDrop: "قم بسحب ملف PDF وإسقاطه في القائمة الجانبية للبدء.",
-    clickBox: "انقر على أحد المربعات بالأعلى للتحليل",
-    analyzing: "جاري قراءة وتحليل المستند...",
-    executiveSummary: "الملخص التنفيذي للورقة",
-    simScoreInfo: "يتم احتساب هذه النسبة بربط محتوى البحث بالشبكة العنكبوتية واستخراج الأعمال المشابهة.",
-    matchingSources: "الأبحاث والمصادر المطابقة (من الإنترنت)",
-    topicDist: "التوزيع الموضوعي للورقة",
-    topics: "المواضيع",
-    chatWithDoc: "نقاش مع المستند",
-    askAi: "اسأل الذكاء الاصطناعي عن أي جزئية في البحث",
-    typeQuestion: "اكتب سؤالك هنا...",
-    addPdfToStart: "أضف ملف PDF للبدء في طرح الأسئلة",
-    aiWelcome: "أهلاً بك! أنا مساعدك البحثي. قم برفع ورقة بحثية وسلني أي سؤال عنها.",
-    needFile: "الرجاء رفع ورقة بحثية أولاً.",
-    errorAlert: "حدث خطأ أثناء تحليل البيانات. قد يكون حجم الملف كبيراً جداً أو حدث خطأ في الاتصال.",
-    apiKeyTitle: "مفتاح Gemini API",
-    apiKeyPlaceholder: "أدخل مفتاح API هنا...",
-    keyValid: "المفتاح صالح وجاهز",
-    keyInvalid: "المفتاح غير صالح أو منتهي",
-    keyRequired: "الرجاء إدخال مفتاح API صحيح أولاً.",
-    apiKeyModalTitle: "إعداد مفتاح API",
-    apiKeyDesc: "أدخل مفتاح Gemini API الخاص بك للبدء. هذا الرمز لا يتم حفظه في أي خادم، وسيتم حذفه تلقائياً فور إغلاق أو تحديث الصفحة لضمان خصوصيتك.",
-    close: "إغلاق",
-    prompts: {
-      summary: "قم بتلخيص الورقة البحثية المرفقة بشكل احترافي. استخدم عناوين رئيسية واضحة ونقاط فرعية (Bullet points). استخرج أهم المخرجات فقط.",
-      similarity: "بصفتك خبير أكاديمي، ابحث في الإنترنت عن أبحاث ومقالات مشابهة لموضوع الورقة المرفقة.\n1. أعطني نسبة تشابه تقديرية من 100 (كرقم فقط في بداية السطر الأول).\n2. اذكر أهم الأبحاث أو المصادر المشابهة التي وجدتها مع شرح مختصر للتشابه.",
-      chart: "حلل هذه الورقة البحثية المرفقة واستخرج أهم 4 إلى 6 مواضيع رئيسية تمت مناقشتها فيها، وأعطني النسبة المئوية لكل موضوع بحيث يكون المجموع الكلي للنسب 100. (اكتب أسماء المواضيع باللغة العربية)",
-      chatContext: "بناءً على المستند المرفق، أجب على سؤال المستخدم التالي بشكل دقيق ومختصر. إذا لم تكن الإجابة في النص المرفق، أخبره بذلك بوضوح.\n\nسؤال المستخدم: "
-    }
-  },
-  en: {
-    appTitle: "ResearchLM",
-    appSub: "Smart Research Assistant",
-    apiStatus: "Connection Status",
-    connected: "Connected & Ready",
-    usingBuiltIn: "Using built-in system key",
-    sources: "Sources (PDF / TXT)",
-    uploadTitle: "Upload Research Paper",
-    uploadSub: "Supports: PDF & TXT",
-    orTesting: "— Or for testing —",
-    loadSample: "Load Sample File",
-    loadedReady: "Loaded & Ready for Analysis",
-    smartSummary: "Smart Summary",
-    similarity: "Similarity Score",
-    topicAnalysis: "Topic Analysis",
-    workspaceEmpty: "Workspace is Empty",
-    dragDrop: "Drag and drop a PDF file into the sidebar to start.",
-    clickBox: "Click one of the boxes above to analyze",
-    analyzing: "Reading and analyzing document...",
-    executiveSummary: "Executive Summary",
-    simScoreInfo: "This score is calculated by cross-referencing the research content with web sources.",
-    matchingSources: "Matching Research & Sources (Web)",
-    topicDist: "Topic Distribution",
-    topics: "Topics",
-    chatWithDoc: "Chat with Document",
-    askAi: "Ask AI about any specific part of the research",
-    typeQuestion: "Type your question here...",
-    addPdfToStart: "Add a PDF to start asking questions",
-    aiWelcome: "Welcome! I am your research assistant. Upload a paper and ask me anything about it.",
-    needFile: "Please upload a research paper first.",
-    errorAlert: "An error occurred during analysis. The file might be too large or there was a connection error.",
-    apiKeyTitle: "Gemini API Key",
-    apiKeyPlaceholder: "Enter API key here...",
-    keyValid: "Key is valid and ready",
-    keyInvalid: "Invalid or expired API key",
-    keyRequired: "Please enter a valid API key first.",
-    apiKeyModalTitle: "API Key Settings",
-    apiKeyDesc: "Enter your Gemini API key to start. This code is not saved on any server and will be automatically deleted as soon as you close or refresh the page for your privacy.",
-    close: "Close",
-    prompts: {
-      summary: "Professionally summarize the attached research paper. Use clear main headings and bullet points. Extract only the most important findings.",
-      similarity: "As an academic expert, search the internet for research and articles similar to the topic of the attached paper.\n1. Give me an estimated similarity percentage out of 100 (as a number only at the beginning of the first line).\n2. Mention the most important similar research or sources you found with a brief explanation of the similarity.",
-      chart: "Analyze this attached research paper and extract the top 4 to 6 main topics discussed in it, and give me the percentage for each topic so that the total percentage is 100. (Write topic names in English)",
-      chatContext: "Based on the attached document, answer the following user question accurately and concisely. If the answer is not in the attached text, tell them clearly.\n\nUser Question: "
-    }
-  }
-};
-
-// --- API Utility with Exponential Backoff ---
-const fetchGeminiWithRetry = async (url, payload, retries = 3) => {
-  const delays = [1000, 2000, 4000];
-  for (let i = 0; i < retries; i++) {
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'API Error');
-      }
-      return await response.json();
-    } catch (error) {
-      if (i === retries - 1) throw error;
-      await new Promise(res => setTimeout(res, delays[i]));
-    }
-  }
-};
-
-export default function ResearchLM() {
-  const [lang, setLang] = useState('ar');
-  const t = translations[lang];
-  const isRtl = lang === 'ar';
-
-  const [apiKey, setApiKey] = useState('');
-  const [apiStatus, setApiStatus] = useState('idle'); 
-  const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
-
-  const [fileData, setFileData] = useState(null); 
-  const [fileType, setFileType] = useState(''); 
-  const [fileName, setFileName] = useState('');
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ResearchLM - المساعد البحثي الذكي</title>
   
-  const [activeTab, setActiveTab] = useState(null); 
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisData, setAnalysisData] = useState({
-    summary: '',
-    similarityScore: null,
-    similarityText: '',
-    topics: []
-  });
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  const [chatMessages, setChatMessages] = useState([]);
-  const [chatInput, setChatInput] = useState('');
-  const [isChatting, setIsChatting] = useState(false);
-  const chatScrollRef = useRef(null);
+  <style>
+    /* تحسين شكل شريط التمرير */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800 overflow-hidden">
+  
+  <div id="root"></div>
 
-  // Model URL Constant
-  const MODEL_URL = (key) => `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+  <script type="text/babel" data-type="module">
+    // استيراد مكتبات React والأيقونات مباشرة من الروابط
+    import React, { useState, useEffect, useRef } from 'https://esm.sh/react@18.2.0';
+    import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
+    import { 
+      Upload, Key, CheckCircle2, FileText, 
+      Search, PieChart, MessageSquare, Send, Loader2, 
+      ChevronRight, BrainCircuit, File, AlertCircle,
+      FileType, Globe, XCircle, RefreshCcw
+    } from 'https://esm.sh/lucide-react@0.292.0';
 
-  useEffect(() => {
-    if (chatMessages.length === 0 || chatMessages.length === 1) {
-      setChatMessages([{ role: 'ai', text: t.aiWelcome }]);
-    }
-  }, [lang, t.aiWelcome, chatMessages.length]);
-
-  useEffect(() => {
-    if (chatScrollRef.current) {
-      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
-    }
-  }, [chatMessages]);
-
-  const toggleLanguage = () => {
-    setLang(prev => prev === 'ar' ? 'en' : 'ar');
-  };
-
-  const validateApiKey = async () => {
-    if (!apiKey) return;
-    setApiStatus('checking');
-    try {
-      const payload = { contents: [{ parts: [{ text: "Hello" }] }] };
-      await fetchGeminiWithRetry(MODEL_URL(apiKey), payload, 1);
-      setApiStatus('valid');
-    } catch (error) {
-      console.error(error);
-      setApiStatus('invalid');
-    }
-  };
-
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    setFileName(file.name);
-    resetAnalysis();
-    
-    const reader = new FileReader();
-    
-    if (file.type === 'application/pdf') {
-      reader.onload = (event) => {
-        const base64Str = event.target.result.split(',')[1];
-        setFileData(base64Str);
-        setFileType('application/pdf');
-      };
-      reader.readAsDataURL(file); 
-    } else {
-      reader.onload = (event) => {
-        setFileData(event.target.result);
-        setFileType('text/plain');
-      };
-      reader.readAsText(file); 
-    }
-  };
-
-  const loadSampleDocument = () => {
-    setFileName("sample_research_ai_healthcare.txt");
-    setFileData(lang === 'ar' 
-      ? `عنوان الورقة: تأثير الذكاء الاصطناعي في التشخيص الطبي المبكر\nالملخص: تناقش هذه الورقة البحثية دور تقنيات التعلم العميق في تحسين دقة التشخيص المبكر للأمراض المزمنة. أظهرت النتائج أن استخدام الشبكات العصبية الالتفافية أدى إلى تحسين دقة التشخيص بنسبة 15%.\nالمقدمة: يركز هذا البحث على الخوارزميات، التحديات الأخلاقية، وخصوصية البيانات الطبية للمرضى.`
-      : `Paper Title: Impact of AI on Early Medical Diagnosis\nAbstract: This research discusses the role of deep learning in improving early diagnosis accuracy for chronic diseases. Results show CNNs improved accuracy by 15%.\nIntroduction: Focuses on algorithms, ethical challenges, and patient data privacy.`
-    );
-    setFileType('text/plain');
-    resetAnalysis();
-  };
-
-  const resetAnalysis = () => {
-    setAnalysisData({ summary: '', similarityScore: null, similarityText: '', topics: [] });
-    setActiveTab(null);
-  };
-
-  const buildPromptContents = (promptText) => {
-    const parts = [{ text: promptText }];
-    if (fileType === 'application/pdf') {
-      parts.push({ inlineData: { mimeType: 'application/pdf', data: fileData } });
-    } else {
-      parts[0].text += `\n\n[Document Content]:\n${fileData.substring(0, 15000)}`;
-    }
-    return [{ parts }];
-  };
-
-  const handleAction = async (actionType) => {
-    if (!apiKey || apiStatus !== 'valid') {
-      alert(t.keyRequired);
-      return;
-    }
-    if (!fileData) {
-      alert(t.needFile);
-      return;
-    }
-
-    setActiveTab(actionType);
-    
-    if (actionType === 'summary' && analysisData.summary) return;
-    if (actionType === 'similarity' && analysisData.similarityScore !== null) return;
-    if (actionType === 'chart' && analysisData.topics.length > 0) return;
-
-    setIsAnalyzing(true);
-    const url = MODEL_URL(apiKey);
-
-    try {
-      if (actionType === 'summary') {
-        const payload = { contents: buildPromptContents(t.prompts.summary) };
-        const result = await fetchGeminiWithRetry(url, payload);
-        const text = result.candidates[0].content.parts[0].text;
-        setAnalysisData(prev => ({ ...prev, summary: text }));
-      } 
-      else if (actionType === 'similarity') {
-        const payload = {
-          contents: buildPromptContents(t.prompts.similarity),
-          tools: [{ googleSearch: {} }]
-        };
-        const result = await fetchGeminiWithRetry(url, payload);
-        const text = result.candidates[0].content.parts[0].text;
-        
-        const lines = text.split('\n');
-        const scoreMatch = lines[0].match(/\d+/);
-        const score = scoreMatch ? parseInt(scoreMatch[0]) : 45; 
-        
-        setAnalysisData(prev => ({ 
-          ...prev, 
-          similarityScore: score > 100 ? 100 : score, 
-          similarityText: text.substring(text.indexOf('\n') + 1).trim() || text 
-        }));
+    // --- قاموس الترجمة ---
+    const translations = {
+      ar: {
+        appTitle: "ResearchLM", appSub: "مساعدك البحثي الذكي", apiStatus: "حالة الاتصال (API)", connected: "متصل وجاهز", usingBuiltIn: "يتم استخدام المفتاح المدمج", sources: "المصادر (PDF / TXT)", uploadTitle: "ارفع ورقة بحثية", uploadSub: "يدعم صيغ: PDF و TXT", orTesting: "— أو للتجربة —", loadSample: "تحميل ملف تجريبي", loadedReady: "تم التحميل وجاهز للتحليل", smartSummary: "الملخص الذكي", similarity: "نسبة التشابه", topicAnalysis: "التحليل الموضوعي", workspaceEmpty: "مساحة العمل فارغة", dragDrop: "قم بسحب ملف PDF وإسقاطه في القائمة الجانبية للبدء.", clickBox: "انقر على أحد المربعات بالأعلى للتحليل", analyzing: "جاري قراءة وتحليل المستند...", executiveSummary: "الملخص التنفيذي للورقة", simScoreInfo: "يتم احتساب هذه النسبة بربط محتوى البحث بالشبكة العنكبوتية واستخراج الأعمال المشابهة.", matchingSources: "الأبحاث والمصادر المطابقة (من الإنترنت)", topicDist: "التوزيع الموضوعي للورقة", topics: "المواضيع", chatWithDoc: "نقاش مع المستند", askAi: "اسأل الذكاء الاصطناعي عن أي جزئية في البحث", typeQuestion: "اكتب سؤالك هنا...", addPdfToStart: "أضف ملف PDF للبدء في طرح الأسئلة", aiWelcome: "أهلاً بك! أنا مساعدك البحثي. قم برفع ورقة بحثية وسلني أي سؤال عنها.", needFile: "الرجاء رفع ورقة بحثية أولاً.", errorAlert: "حدث خطأ أثناء تحليل البيانات. قد يكون حجم الملف كبيراً جداً أو حدث خطأ في الاتصال.", apiKeyTitle: "مفتاح Gemini API", apiKeyPlaceholder: "أدخل مفتاح API هنا...", keyValid: "المفتاح صالح وجاهز", keyInvalid: "المفتاح غير صالح أو منتهي", keyRequired: "الرجاء إدخال مفتاح API صحيح أولاً.", apiKeyModalTitle: "إعداد مفتاح API", apiKeyDesc: "أدخل مفتاح Gemini API الخاص بك للبدء. هذا الرمز لا يتم حفظه في أي خادم، وسيتم حذفه تلقائياً فور إغلاق أو تحديث الصفحة لضمان خصوصيتك.", close: "إغلاق", prompts: { summary: "قم بتلخيص الورقة البحثية المرفقة بشكل احترافي. استخدم عناوين رئيسية واضحة ونقاط فرعية (Bullet points). استخرج أهم المخرجات فقط.", similarity: "بصفتك خبير أكاديمي، ابحث في الإنترنت عن أبحاث ومقالات مشابهة لموضوع الورقة المرفقة.\n1. أعطني نسبة تشابه تقديرية من 100 (كرقم فقط في بداية السطر الأول).\n2. اذكر أهم الأبحاث أو المصادر المشابهة التي وجدتها مع شرح مختصر للتشابه.", chart: "حلل هذه الورقة البحثية المرفقة واستخرج أهم 4 إلى 6 مواضيع رئيسية تمت مناقشتها فيها، وأعطني النسبة المئوية لكل موضوع بحيث يكون المجموع الكلي للنسب 100. (اكتب أسماء المواضيع باللغة العربية)", chatContext: "بناءً على المستند المرفق، أجب على سؤال المستخدم التالي بشكل دقيق ومختصر. إذا لم تكن الإجابة في النص المرفق، أخبره بذلك بوضوح.\n\nسؤال المستخدم: " }
+      },
+      en: {
+        appTitle: "ResearchLM", appSub: "Smart Research Assistant", apiStatus: "Connection Status", connected: "Connected & Ready", usingBuiltIn: "Using built-in system key", sources: "Sources (PDF / TXT)", uploadTitle: "Upload Research Paper", uploadSub: "Supports: PDF & TXT", orTesting: "— Or for testing —", loadSample: "Load Sample File", loadedReady: "Loaded & Ready for Analysis", smartSummary: "Smart Summary", similarity: "Similarity Score", topicAnalysis: "Topic Analysis", workspaceEmpty: "Workspace is Empty", dragDrop: "Drag and drop a PDF file into the sidebar to start.", clickBox: "Click one of the boxes above to analyze", analyzing: "Reading and analyzing document...", executiveSummary: "Executive Summary", simScoreInfo: "This score is calculated by cross-referencing the research content with web sources.", matchingSources: "Matching Research & Sources (Web)", topicDist: "Topic Distribution", topics: "Topics", chatWithDoc: "Chat with Document", askAi: "Ask AI about any specific part of the research", typeQuestion: "Type your question here...", addPdfToStart: "Add a PDF to start asking questions", aiWelcome: "Welcome! I am your research assistant. Upload a paper and ask me anything about it.", needFile: "Please upload a research paper first.", errorAlert: "An error occurred during analysis. The file might be too large or there was a connection error.", apiKeyTitle: "Gemini API Key", apiKeyPlaceholder: "Enter API key here...", keyValid: "Key is valid and ready", keyInvalid: "Invalid or expired API key", keyRequired: "Please enter a valid API key first.", apiKeyModalTitle: "API Key Settings", apiKeyDesc: "Enter your Gemini API key to start. This code is not saved on any server and will be automatically deleted as soon as you close or refresh the page for your privacy.", close: "Close", prompts: { summary: "Professionally summarize the attached research paper. Use clear main headings and bullet points. Extract only the most important findings.", similarity: "As an academic expert, search the internet for research and articles similar to the topic of the attached paper.\n1. Give me an estimated similarity percentage out of 100 (as a number only at the beginning of the first line).\n2. Mention the most important similar research or sources you found with a brief explanation of the similarity.", chart: "Analyze this attached research paper and extract the top 4 to 6 main topics discussed in it, and give me the percentage for each topic so that the total percentage is 100. (Write topic names in English)", chatContext: "Based on the attached document, answer the following user question accurately and concisely. If the answer is not in the attached text, tell them clearly.\n\nUser Question: " }
       }
-      else if (actionType === 'chart') {
-        const payload = {
-          contents: buildPromptContents(t.prompts.chart),
-          generationConfig: {
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: "OBJECT",
-              properties: {
-                topics: {
-                  type: "ARRAY",
-                  items: {
-                    type: "OBJECT",
-                    properties: {
-                      name: { type: "STRING", description: "Topic name" },
-                      percentage: { type: "INTEGER", description: "Percentage value" }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        };
-        const result = await fetchGeminiWithRetry(url, payload);
-        const jsonResponse = JSON.parse(result.candidates[0].content.parts[0].text);
-        setAnalysisData(prev => ({ ...prev, topics: jsonResponse.topics }));
-      }
-    } catch (error) {
-      console.error(error);
-      alert(t.errorAlert);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!chatInput.trim()) return;
-    if (!apiKey || apiStatus !== 'valid') {
-      alert(t.keyRequired);
-      return;
-    }
-    if (!fileData) {
-      alert(t.needFile);
-      return;
-    }
-
-    const userMsg = chatInput.trim();
-    setChatInput('');
-    setChatMessages(prev => [...prev, { role: 'user', text: userMsg }]);
-    setIsChatting(true);
-
-    try {
-      const url = MODEL_URL(apiKey);
-      const payload = {
-        contents: buildPromptContents(`${t.prompts.chatContext}${userMsg}`)
-      };
-      
-      const result = await fetchGeminiWithRetry(url, payload);
-      const aiResponse = result.candidates[0].content.parts[0].text;
-      
-      setChatMessages(prev => [...prev, { role: 'ai', text: aiResponse }]);
-    } catch (error) {
-      console.error(error);
-      setChatMessages(prev => [...prev, { role: 'ai', text: t.errorAlert }]);
-    } finally {
-      setIsChatting(false);
-    }
-  };
-
-  const renderDonutChart = (topics) => {
-    if (!topics || topics.length === 0) return null;
-    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
-    let cumulativePercent = 0;
-    
-    const getCoordinatesForPercent = (percent) => {
-      const x = Math.cos(2 * Math.PI * percent);
-      const y = Math.sin(2 * Math.PI * percent);
-      return [x, y];
     };
 
-    const slices = topics.map((topic, i) => {
-      const startPercent = cumulativePercent;
-      const percent = topic.percentage / 100;
-      cumulativePercent += percent;
-      const endPercent = cumulativePercent;
+    const fetchGeminiWithRetry = async (url, payload, retries = 3) => {
+      const delays = [1000, 2000, 4000];
+      for (let i = 0; i < retries; i++) {
+        try {
+          const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.error?.message || 'API Error'); }
+          return await response.json();
+        } catch (error) {
+          if (i === retries - 1) throw error;
+          await new Promise(res => setTimeout(res, delays[i]));
+        }
+      }
+    };
 
-      const [startX, startY] = getCoordinatesForPercent(startPercent);
-      const [endX, endY] = getCoordinatesForPercent(endPercent);
-      const largeArcFlag = percent > 0.5 ? 1 : 0;
-      const pathData = [
-        `M ${startX} ${startY}`,
-        `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`,
-        `L 0 0`,
-      ].join(' ');
-
-      return <path key={i} d={pathData} fill={colors[i % colors.length]} transform="translate(1, 1)" />;
-    });
-
-    return (
-      <div className="flex flex-col items-center justify-center p-6 bg-white rounded-xl shadow-sm border border-slate-100">
-        <div className="relative w-64 h-64 mb-8">
-          <svg viewBox="-1 -1 4 4" className="w-full h-full transform -rotate-90">
-            {slices}
-            <circle cx="1" cy="1" r="0.6" fill="white" />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <PieChart className="w-8 h-8 text-slate-400 mb-1" />
-            <span className="text-sm font-bold text-slate-600">{t.topics}</span>
-          </div>
-        </div>
-        <div className="w-full grid grid-cols-2 gap-4">
-          {topics.map((topic, i) => (
-            <div key={i} className="flex items-center text-sm">
-              <span className={`w-3 h-3 rounded-full shrink-0 ${isRtl ? 'ml-2' : 'mr-2'}`} style={{ backgroundColor: colors[i % colors.length] }}></span>
-              <span className="flex-1 text-slate-700 truncate">{topic.name}</span>
-              <span className={`font-bold text-slate-900 ${isRtl ? 'mr-2' : 'ml-2'}`}>{topic.percentage}%</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  const renderGauge = (score) => {
-    const strokeWidth = 8;
-    const radius = 50;
-    const circumference = 2 * Math.PI * radius;
-    const strokeDashoffset = circumference - (score / 100) * circumference;
-    const colorClass = score > 70 ? 'text-red-500' : score > 40 ? 'text-yellow-500' : 'text-emerald-500';
-
-    return (
-      <div className="flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-sm border border-slate-100">
-        <div className="relative w-48 h-48 flex items-center justify-center">
-          <svg className="w-full h-full transform -rotate-90 absolute">
-            <circle cx="96" cy="96" r={radius} className="text-slate-100 stroke-current" strokeWidth={strokeWidth} fill="transparent" />
-            <circle cx="96" cy="96" r={radius} className={`${colorClass} stroke-current transition-all duration-1000 ease-in-out`} strokeWidth={strokeWidth} strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round" fill="transparent" />
-          </svg>
-          <div className="flex flex-col items-center z-10">
-            <span className="text-5xl font-black text-slate-800">{score}%</span>
-            <span className="text-xs font-medium text-slate-500 mt-1 uppercase tracking-wider">{t.similarity}</span>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  return (
-    <div dir={isRtl ? "rtl" : "ltr"} className={`flex h-screen bg-slate-50 font-sans text-slate-800 overflow-hidden ${lang === 'en' ? 'text-left' : 'text-right'}`}>
+    function ResearchLM() {
+      const [lang, setLang] = useState('ar');
+      const t = translations[lang];
+      const isRtl = lang === 'ar';
       
-      {/* RIGHT SIDEBAR */}
-      <div className={`w-80 bg-white flex flex-col shadow-sm z-10 shrink-0 ${isRtl ? 'border-l' : 'border-r'} border-slate-200`}>
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-indigo-50/30">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600">
-              <BrainCircuit size={24} />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-l from-indigo-600 to-blue-500">
-                {t.appTitle}
-              </h1>
-              <p className="text-xs text-slate-500">{t.appSub}</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setIsKeyModalOpen(true)}
-              className="relative p-2 hover:bg-white rounded-lg shadow-sm border border-transparent hover:border-slate-200 transition-all flex items-center gap-1 text-slate-600 text-xs font-bold"
-              title={lang === 'ar' ? 'إعدادات المفتاح' : 'Key Settings'}
-            >
-              <Key size={18} />
-              {apiStatus === 'valid' && <span className="absolute top-1 right-1 w-2 h-2 bg-emerald-500 rounded-full"></span>}
-              {apiStatus === 'invalid' && <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>}
-            </button>
-
-            <button 
-              onClick={toggleLanguage}
-              className="p-2 hover:bg-white rounded-lg shadow-sm border border-transparent hover:border-slate-200 transition-all flex items-center gap-1 text-slate-600 text-xs font-bold"
-              title="تغيير اللغة / Change Language"
-            >
-              <Globe size={18} />
-              {lang === 'ar' ? 'EN' : 'عربي'}
-            </button>
-          </div>
-        </div>
-
-      <div className="p-6 flex-1 flex flex-col gap-6 overflow-y-auto">
-        <div className="space-y-3">
-          <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-            <FileType size={16} className="text-slate-400" />
-              {t.sources}
-            </label>
-            
-            <div className="relative border-2 border-dashed border-slate-300 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:bg-indigo-50 hover:border-indigo-300 transition-colors cursor-pointer group bg-slate-50/50">
-              <input 
-                type="file" 
-                accept=".txt, .pdf" 
-                onChange={handleFileUpload}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              />
-              <Upload size={28} className="text-slate-400 group-hover:text-indigo-500 mb-3 transition-colors" />
-              <span className="text-sm font-bold text-slate-700">{t.uploadTitle}</span>
-              <span className="text-xs text-slate-500 mt-1 font-medium">{t.uploadSub}</span>
-            </div>
-            
-            <div className="text-center py-1">
-              <span className="text-xs text-slate-400">{t.orTesting}</span>
-            </div>
-            
-            <button 
-              onClick={loadSampleDocument}
-              className="w-full py-2.5 bg-white hover:bg-slate-50 text-slate-700 text-sm font-bold rounded-lg transition-colors border border-slate-200 shadow-sm"
-            >
-              {t.loadSample}
-            </button>
-          </div>
-
-          {fileName && (
-            <div className="bg-indigo-50 border border-indigo-100 p-3 rounded-xl flex items-center gap-3 shadow-sm">
-              <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600">
-                <File size={20} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className={`text-sm font-bold text-indigo-900 truncate ${isRtl ? 'text-right' : 'text-left'}`} dir="ltr">{fileName}</p>
-                <p className="text-xs text-indigo-600 font-medium">{t.loadedReady}</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* CENTER PANEL */}
-      <div className="flex-1 flex flex-col bg-slate-100 relative">
-        <div className="pt-8 pb-4 flex justify-center z-10 w-full px-8">
-          <div className="bg-white p-2.5 border border-slate-200 rounded-2xl flex gap-3 shadow-sm">
-            
-            <button 
-              onClick={() => handleAction('summary')}
-              disabled={!fileData || isAnalyzing}
-              className={`flex flex-col items-center justify-center w-32 h-32 gap-3 rounded-xl transition-all ${
-                activeTab === 'summary' 
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 scale-100 ring-2 ring-indigo-300 ring-offset-2' 
-                  : 'bg-slate-50 text-slate-600 border border-slate-100 hover:bg-indigo-50 hover:text-indigo-600 disabled:opacity-40 disabled:hover:bg-slate-50 disabled:cursor-not-allowed'
-              }`}
-            >
-              <FileText size={32} />
-              <span className="text-sm font-bold text-center leading-tight whitespace-pre-line">
-                {lang === 'ar' ? "الملخص\nالذكي" : "Smart\nSummary"}
-              </span>
-            </button>
-            
-            <button 
-              onClick={() => handleAction('similarity')}
-              disabled={!fileData || isAnalyzing}
-              className={`flex flex-col items-center justify-center w-32 h-32 gap-3 rounded-xl transition-all ${
-                activeTab === 'similarity' 
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 scale-100 ring-2 ring-indigo-300 ring-offset-2' 
-                  : 'bg-slate-50 text-slate-600 border border-slate-100 hover:bg-indigo-50 hover:text-indigo-600 disabled:opacity-40 disabled:hover:bg-slate-50 disabled:cursor-not-allowed'
-              }`}
-            >
-              <Search size={32} />
-              <span className="text-sm font-bold text-center leading-tight whitespace-pre-line">
-                {lang === 'ar' ? "نسبة\nالتشابه" : "Similarity\nScore"}
-              </span>
-            </button>
-
-            <button 
-              onClick={() => handleAction('chart')}
-              disabled={!fileData || isAnalyzing}
-              className={`flex flex-col items-center justify-center w-32 h-32 gap-3 rounded-xl transition-all ${
-                activeTab === 'chart' 
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 scale-100 ring-2 ring-indigo-300 ring-offset-2' 
-                  : 'bg-slate-50 text-slate-600 border border-slate-100 hover:bg-indigo-50 hover:text-indigo-600 disabled:opacity-40 disabled:hover:bg-slate-50 disabled:cursor-not-allowed'
-              }`}
-            >
-              <PieChart size={32} />
-              <span className="text-sm font-bold text-center leading-tight whitespace-pre-line">
-                {lang === 'ar' ? "التحليل\nالموضوعي" : "Topic\nAnalysis"}
-              </span>
-            </button>
-
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-8 pb-8 pt-2 flex justify-center">
-          <div className="w-full max-w-4xl">
-            
-            {!fileData && (
-              <div className="h-full flex flex-col items-center justify-center text-slate-400 mt-20">
-                <FileType size={64} className="mb-6 opacity-20" />
-                <h2 className="text-2xl font-bold text-slate-600 mb-2">{t.workspaceEmpty}</h2>
-                <p>{t.dragDrop}</p>
-              </div>
-            )}
-
-            {fileData && !activeTab && !isAnalyzing && (
-              <div className="h-full flex flex-col items-center justify-center text-slate-400 mt-20">
-                <ChevronRight size={48} className={`mb-4 opacity-30 transform rotate-90`} />
-                <h2 className="text-xl font-medium text-slate-500">{t.clickBox}</h2>
-              </div>
-            )}
-
-            {isAnalyzing && (
-              <div className="h-full flex flex-col items-center justify-center text-indigo-600 mt-20">
-                <Loader2 size={48} className="animate-spin mb-4" />
-                <p className="font-bold text-lg animate-pulse">{t.analyzing}</p>
-              </div>
-            )}
-
-            {!isAnalyzing && activeTab === 'summary' && analysisData.summary && (
-              <div className={`bg-white rounded-2xl shadow-sm border border-slate-200 p-8 prose prose-slate max-w-none animate-in fade-in slide-in-from-bottom-4 duration-500 ${isRtl ? 'text-right' : 'text-left'}`}>
-                <h2 className="text-2xl font-bold border-b pb-4 mb-6 text-slate-800 flex items-center gap-2">
-                  <FileText className="text-indigo-500" />
-                  {t.executiveSummary}
-                </h2>
-                <div className="space-y-4 text-slate-700 leading-relaxed font-medium">
-                  {analysisData.summary.split('\n').map((line, idx) => {
-                    if (line.startsWith('##') || line.startsWith('**') && line.endsWith('**')) {
-                      return <h3 key={idx} className="text-lg font-bold text-slate-900 mt-6">{line.replace(/#/g, '').replace(/\*/g, '')}</h3>;
-                    } else if (line.startsWith('*') || line.startsWith('-')) {
-                      return <li key={idx} className={`${isRtl ? 'ml-4' : 'mr-4'} list-disc`}>{line.substring(1).trim()}</li>;
-                    } else if (line.trim() !== '') {
-                      return <p key={idx}>{line}</p>;
-                    }
-                    return null;
-                  })}
-                </div>
-              </div>
-            )}
-
-            {!isAnalyzing && activeTab === 'similarity' && analysisData.similarityScore !== null && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="md:col-span-1 flex flex-col gap-4">
-                    {renderGauge(analysisData.similarityScore)}
-                    <div className="bg-white p-4 rounded-xl border border-slate-200 flex gap-3 text-slate-600 text-sm shadow-sm">
-                      <AlertCircle className="shrink-0 text-indigo-500" size={20} />
-                      <p className="font-medium">{t.simScoreInfo}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="md:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                    <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-slate-800 border-b pb-4">
-                      <Search className="text-indigo-500" />
-                      {t.matchingSources}
-                    </h3>
-                    <div className="space-y-3 text-slate-700 leading-relaxed text-sm font-medium">
-                      {analysisData.similarityText.split('\n').map((line, idx) => {
-                        if (line.startsWith('*') || line.startsWith('-')) {
-                          return <li key={idx} className={`list-disc ${isRtl ? 'mr-4' : 'ml-4'} mb-2`}>{line.substring(1).trim().replace(/\*/g, '')}</li>;
-                        } else if (line.trim() !== '') {
-                          return <p key={idx} className="mb-2">{line.replace(/\*/g, '')}</p>;
-                        }
-                        return null;
-                      })}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {!isAnalyzing && activeTab === 'chart' && analysisData.topics.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <h2 className="text-2xl font-bold border-b pb-4 mb-8 text-slate-800 flex items-center gap-2">
-                  <PieChart className="text-indigo-500" />
-                  {t.topicDist}
-                </h2>
-                <div className="flex justify-center">
-                  {renderDonutChart(analysisData.topics)}
-                </div>
-              </div>
-            )}
-
-          </div>
-        </div>
-      </div>
-
-      {/* LEFT SIDEBAR (Chat) */}
-      <div className={`w-[380px] bg-white flex flex-col shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.05)] z-20 shrink-0 ${isRtl ? 'border-r' : 'border-l'} border-slate-200`}>
-        <div className="p-5 border-b border-slate-100 bg-white flex items-center gap-3">
-          <div className="p-2 bg-indigo-50 rounded-lg">
-            <MessageSquare size={20} className="text-indigo-600" />
-          </div>
-          <div>
-            <h2 className="font-bold text-slate-800">{t.chatWithDoc}</h2>
-            <p className="text-xs text-slate-500">{t.askAi}</p>
-          </div>
-        </div>
-
-        <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-5 space-y-5 bg-slate-50/50 scroll-smooth">
-          {chatMessages.map((msg, idx) => (
-            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[85%] p-3.5 rounded-2xl text-sm leading-relaxed font-medium ${
-                msg.role === 'user' 
-                  ? `bg-indigo-600 text-white ${isRtl ? 'rounded-tl-none' : 'rounded-tr-none'} shadow-md shadow-indigo-200/50` 
-                  : `bg-white border border-slate-200 text-slate-700 ${isRtl ? 'rounded-tr-none' : 'rounded-tl-none'} shadow-sm`
-              }`}>
-                {msg.text}
-              </div>
-            </div>
-          ))}
-          {isChatting && (
-            <div className="flex justify-start">
-              <div className={`max-w-[85%] p-4 rounded-2xl ${isRtl ? 'rounded-tr-none' : 'rounded-tl-none'} bg-white border border-slate-200 flex items-center gap-2 text-slate-400`}>
-                <div className="w-2 h-2 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                <div className="w-2 h-2 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                <div className="w-2 h-2 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '300ms' }}></div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="p-4 bg-white border-t border-slate-100">
-          <form onSubmit={handleSendMessage} className="relative">
-            <input 
-              type="text" 
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              placeholder={t.typeQuestion}
-              disabled={!fileData || isChatting}
-              className={`w-full bg-slate-100 border border-slate-200 rounded-xl py-3.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all disabled:opacity-50 focus:bg-white ${isRtl ? 'pr-4 pl-12' : 'pl-4 pr-12'}`}
-            />
-            <button 
-              type="submit"
-              disabled={!fileData || !chatInput.trim() || isChatting}
-              className={`absolute top-1/2 -translate-y-1/2 p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:hover:bg-indigo-600 transition-colors shadow-sm ${isRtl ? 'left-2' : 'right-2'}`}
-            >
-              <Send size={18} className={`transform ${isRtl ? 'rotate-180' : ''}`} /> 
-            </button>
-          </form>
-          {!fileData && (
-            <p className="text-xs text-center text-slate-400 mt-3 font-medium">
-              {t.addPdfToStart}
-            </p>
-          )}
-        </div>
-      </div>
+      const [apiKey, setApiKey] = useState('');
+      const [apiStatus, setApiStatus] = useState('idle'); 
+      const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
       
-      {/* API Key Modal */}
-      {isKeyModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600">
-                <Key size={24} />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-800">{t.apiKeyModalTitle}</h3>
-              </div>
-            </div>
-            
-            <div className="text-sm text-slate-600 leading-relaxed mb-6 bg-amber-50 p-3 rounded-lg border border-amber-100 flex items-start gap-2">
-              <AlertCircle size={18} className="shrink-0 text-amber-500 mt-0.5" /> 
-              <span>{t.apiKeyDesc}</span>
-            </div>
+      const [fileData, setFileData] = useState(null); 
+      const [fileType, setFileType] = useState(''); 
+      const [fileName, setFileName] = useState('');
+      
+      const [activeTab, setActiveTab] = useState(null); 
+      const [isAnalyzing, setIsAnalyzing] = useState(false);
+      const [analysisData, setAnalysisData] = useState({ summary: '', similarityScore: null, similarityText: '', topics: [] });
+      
+      const [chatMessages, setChatMessages] = useState([]);
+      const [chatInput, setChatInput] = useState('');
+      const [isChatting, setIsChatting] = useState(false);
+      const chatScrollRef = useRef(null);
 
-            <div className="space-y-4">
-              <div className="flex relative">
-                <input 
-                  type="password" 
-                  value={apiKey}
-                  onChange={(e) => { setApiKey(e.target.value); setApiStatus('idle'); }}
-                  placeholder={t.apiKeyPlaceholder}
-                  className={`w-full py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-left dir-ltr ${isRtl ? 'pl-12 pr-4' : 'pr-12 pl-4'}`}
-                  dir="ltr"
-                />
-                <button 
-                  onClick={validateApiKey}
-                  className={`absolute top-1/2 -translate-y-1/2 p-2 rounded-lg hover:bg-slate-200 transition-colors ${isRtl ? 'left-2' : 'right-2'}`}
-                  title={lang === 'ar' ? 'تحقق من المفتاح' : 'Validate Key'}
-                >
-                  {apiStatus === 'checking' && <Loader2 size={18} className="text-indigo-500 animate-spin" />}
-                  {apiStatus === 'valid' && <CheckCircle2 size={18} className="text-emerald-500" />}
-                  {apiStatus === 'invalid' && <XCircle size={18} className="text-red-500" />}
-                  {apiStatus === 'idle' && <RefreshCcw size={18} className="text-slate-400" />}
-                </button>
-              </div>
-              
-              <div className="flex items-center justify-between mt-2 h-6">
-                <div>
-                  {apiStatus === 'valid' && <span className="text-xs text-emerald-600 font-bold flex items-center gap-1"><CheckCircle2 size={14}/> {t.keyValid}</span>}
-                  {apiStatus === 'invalid' && <span className="text-xs text-red-500 font-bold flex items-center gap-1"><XCircle size={14}/> {t.keyInvalid}</span>}
-                </div>
-              </div>
+      const MODEL_URL = (key) => `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
 
-              <button 
-                onClick={() => setIsKeyModalOpen(false)}
-                className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors"
-              >
-                {t.close}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      useEffect(() => {
+        if (chatMessages.length === 0 || chatMessages.length === 1) { setChatMessages([{ role: 'ai', text: t.aiWelcome }]); }
+      }, [lang, t.aiWelcome, chatMessages.length]);
 
-    </div>
-  );
-}
+      useEffect(() => {
+        if (chatScrollRef.current) { chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight; }
+      }, [chatMessages]);
+
+      const toggleLanguage = () => { setLang(prev => prev === 'ar' ? 'en' : 'ar'); };
+
+      const validateApiKey = async () => {
+        if (!apiKey) return;
+        setApiStatus('checking');
+        try {
+          const payload = { contents: [{ parts: [{ text: "Hello" }] }] };
+          await fetchGeminiWithRetry(MODEL_URL(apiKey), payload, 1);
+          setApiStatus('valid');
+        } catch (error) { console.error(error); setApiStatus('invalid'); }
+      };
+
+      const handleFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setFileName(file.name);
+        resetAnalysis();
+        const reader = new FileReader();
+        if (file.type === 'application/pdf') {
+          reader.onload = (event) => {
+            const base64Str = event.target.result.split(',')[1];
+            setFileData(base64Str);
+            setFileType('application/pdf');
+          };
+          reader.readAsDataURL(file); 
+        } else {
+          reader.onload = (event) => {
+            setFileData(event.target.result);
+            setFileType('text/plain');
+          };
+          reader.readAsText(file);
