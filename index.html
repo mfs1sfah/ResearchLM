@@ -12,10 +12,10 @@ const translations = {
     appTitle: "ResearchLM",
     appSub: "مساعدك البحثي الذكي",
     apiKeyTitle: "مفتاح Gemini API",
-    apiKeyPlaceholder: "أدخل مفتاح API الخاص بك هنا...",
-    keyValid: "المفتاح صالح وجاهز للاستخدام",
-    keyInvalid: "المفتاح غير صالح، يرجى التأكد منه",
-    keyRequired: "الرجاء التحقق من صحة مفتاح API أولاً عبر أيقونة الفحص.",
+    apiKeyPlaceholder: "أدخل مفتاحك، أو اتركه فارغاً هنا...",
+    keyValid: "الاتصال جاهز ويعمل بنجاح",
+    keyInvalid: "المفتاح غير صالح أو غير مدعوم",
+    keyRequired: "الرجاء التأكد من صحة الاتصال أولاً عبر أيقونة الفحص.",
     sources: "المصادر (PDF / TXT)",
     uploadTitle: "ارفع ورقة بحثية",
     uploadSub: "يدعم صيغ: PDF و TXT",
@@ -52,10 +52,10 @@ const translations = {
     appTitle: "ResearchLM",
     appSub: "Smart Research Assistant",
     apiKeyTitle: "Gemini API Key",
-    apiKeyPlaceholder: "Enter your API key here...",
-    keyValid: "Key is valid and ready to use",
-    keyInvalid: "Invalid API key, please check",
-    keyRequired: "Please validate your API key first using the check icon.",
+    apiKeyPlaceholder: "Enter key, or leave blank here...",
+    keyValid: "Connection is ready and working",
+    keyInvalid: "Invalid or unsupported API key",
+    keyRequired: "Please validate your connection first using the check icon.",
     sources: "Sources (PDF / TXT)",
     uploadTitle: "Upload Research Paper",
     uploadSub: "Supports: PDF & TXT",
@@ -90,7 +90,7 @@ const translations = {
   }
 };
 
-// --- API Utility for Production ---
+// --- API Utility with Error Handling ---
 const fetchGeminiWithRetry = async (url, payload, retries = 3) => {
   const delays = [1000, 2000, 4000];
   for (let i = 0; i < retries; i++) {
@@ -101,8 +101,8 @@ const fetchGeminiWithRetry = async (url, payload, retries = 3) => {
         body: JSON.stringify(payload)
       });
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'API Error');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `API Error: ${response.status}`);
       }
       return await response.json();
     } catch (error) {
@@ -120,7 +120,7 @@ export default function App() {
 
   // --- API Key State ---
   const [apiKey, setApiKey] = useState('');
-  const [apiStatus, setApiStatus] = useState('idle'); // idle, checking, valid, invalid
+  const [apiStatus, setApiStatus] = useState('idle');
 
   // --- File States ---
   const [fileData, setFileData] = useState(null); 
@@ -143,17 +143,21 @@ export default function App() {
   const [isChatting, setIsChatting] = useState(false);
   const chatScrollRef = useRef(null);
 
-  // --- Production API URL ---
-  // This uses the stable 1.5-flash model which is required for external/published apps
+  // --- API URL Builder ---
   const getApiUrl = () => {
-    return `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey.trim()}`;
+    // IMPORTANT NOTE FOR PUBLISHING:
+    // This preview environment ONLY supports "gemini-2.5-flash-preview-09-2025".
+    // When you deploy this code to a real server (Vercel, Netlify) for public users, 
+    // change the model name below to "gemini-1.5-flash" to avoid "Not Found" errors for personal API keys.
+    const modelName = "gemini-2.5-flash-preview-09-2025";
+    return `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey.trim()}`;
   };
 
   useEffect(() => {
     if (chatMessages.length === 0 || chatMessages.length === 1) {
       setChatMessages([{ role: 'ai', text: t.aiWelcome }]);
     }
-  }, [lang]);
+  }, [lang, t.aiWelcome]);
 
   useEffect(() => {
     if (chatScrollRef.current) {
@@ -165,11 +169,10 @@ export default function App() {
 
   // --- API Validation ---
   const validateApiKey = async () => {
-    if (!apiKey.trim()) return;
     setApiStatus('checking');
     try {
       const url = getApiUrl();
-      const payload = { contents: [{ parts: [{ text: "Connection Test" }] }] };
+      const payload = { contents: [{ parts: [{ text: "Hello" }] }] };
       await fetchGeminiWithRetry(url, payload, 1);
       setApiStatus('valid');
     } catch (error) {
@@ -231,7 +234,7 @@ export default function App() {
 
   // --- Action Handlers ---
   const handleAction = async (actionType) => {
-    if (!apiKey.trim() || apiStatus !== 'valid') {
+    if (apiStatus !== 'valid') {
       alert(t.keyRequired);
       return;
     }
@@ -310,7 +313,7 @@ export default function App() {
     e.preventDefault();
     if (!chatInput.trim()) return;
     
-    if (!apiKey.trim() || apiStatus !== 'valid') {
+    if (apiStatus !== 'valid') {
       alert(t.keyRequired);
       return;
     }
@@ -467,8 +470,7 @@ export default function App() {
               />
               <button 
                 onClick={validateApiKey}
-                disabled={!apiKey.trim() || apiStatus === 'checking'}
-                className={`absolute top-1/2 -translate-y-1/2 p-1.5 rounded-md transition-colors ${!apiKey.trim() ? 'opacity-30 cursor-not-allowed' : 'hover:bg-slate-200'} ${isRtl ? 'left-2' : 'right-2'}`}
+                className={`absolute top-1/2 -translate-y-1/2 p-1.5 rounded-md transition-colors hover:bg-slate-200 ${isRtl ? 'left-2' : 'right-2'}`}
               >
                 {apiStatus === 'checking' && <Loader2 size={18} className="text-indigo-500 animate-spin" />}
                 {apiStatus === 'valid' && <CheckCircle2 size={18} className="text-emerald-500" />}
